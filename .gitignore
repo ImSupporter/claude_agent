@@ -1,0 +1,39 @@
+# 환경변수
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# 가상환경
+.venv/
+venv/
+env/
+
+# 테스트 / 커버리지
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# DB
+*.db
+*.sqlite3
+
+# LangGraph / LangChain 캐시
+.langchain.db
