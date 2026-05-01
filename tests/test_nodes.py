@@ -38,3 +38,21 @@ def test_classify_node_strips_whitespace():
     with patch("graph.nodes.ChatAnthropic", return_value=mock_llm):
         result = classify_node(_base_state())
     assert result["voc_type"] == "INQUIRY"
+
+from graph.nodes import retrieve_node
+from tools.doc_retriever import DocRetrievalError
+
+def test_retrieve_node_success():
+    docs = [{"title": "결제 가이드", "content": "결제 방법..."}]
+    with patch("graph.nodes.query_documents", return_value=docs):
+        result = retrieve_node(_base_state())
+    assert result["retrieved_docs"] == docs
+    assert result["status"] == "processing"
+    assert result["doc_retrieval_attempts"] == 1
+
+def test_retrieve_node_failure():
+    with patch("graph.nodes.query_documents", side_effect=DocRetrievalError("실패")):
+        result = retrieve_node(_base_state())
+    assert result["status"] == "error"
+    assert "답변이 어렵습니다" in result["error_message"]
+    assert result["doc_retrieval_attempts"] == 1

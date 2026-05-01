@@ -19,3 +19,20 @@ def classify_node(state: VocState) -> dict:
     if voc_type not in VALID_VOC_TYPES:
         voc_type = "INQUIRY"
     return {"voc_type": voc_type}
+
+
+def retrieve_node(state: VocState) -> dict:
+    attempts = state.get("doc_retrieval_attempts", 0) + 1
+    try:
+        docs = query_documents(state["raw_input"])
+        return {
+            "retrieved_docs": docs,
+            "doc_retrieval_attempts": attempts,
+            "status": "processing",
+        }
+    except DocRetrievalError:
+        return {
+            "doc_retrieval_attempts": attempts,
+            "status": "error",
+            "error_message": "현재 관련 정보를 조회할 수 없어 답변이 어렵습니다. 잠시 후 다시 시도해 주세요.",
+        }
