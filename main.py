@@ -72,12 +72,12 @@ def interactive_mode() -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="VOC 에이전트")
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--input", "-i", type=str, help="처리할 VOC 텍스트")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--input", "-i", type=str, help="처리할 VOC 텍스트 (없으면 대화형 모드)")
     group.add_argument("--interactive", action="store_true", help="대화형 모드")
     args = parser.parse_args()
 
-    if args.interactive:
-        interactive_mode()
-    else:
+    if args.input:
         run_voc(args.input)
+    else:
+        interactive_mode()
