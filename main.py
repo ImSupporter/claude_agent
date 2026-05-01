@@ -41,8 +41,7 @@ def _initial_state(voc_text: str) -> VocState:
         "error_message": None,
     }
 
-def run_voc(voc_text: str) -> None:
-    graph = build_graph()
+def run_voc(graph, voc_text: str) -> None:
     config = {"configurable": {"thread_id": str(uuid.uuid4())}}
     result = graph.invoke(_initial_state(voc_text), config)
 
@@ -57,7 +56,7 @@ def run_voc(voc_text: str) -> None:
 
     print(format_output(result))
 
-def interactive_mode() -> None:
+def interactive_mode(graph) -> None:
     print("VOC 에이전트 대화형 모드 (종료: 'exit' 또는 Ctrl+C)")
     while True:
         try:
@@ -65,7 +64,7 @@ def interactive_mode() -> None:
             if voc.lower() == "exit":
                 break
             if voc:
-                run_voc(voc)
+                run_voc(graph, voc)
         except KeyboardInterrupt:
             print("\n종료합니다.")
             break
@@ -77,7 +76,9 @@ if __name__ == "__main__":
     group.add_argument("--interactive", action="store_true", help="대화형 모드")
     args = parser.parse_args()
 
+    graph = build_graph()
+
     if args.input:
-        run_voc(args.input)
+        run_voc(graph, args.input)
     else:
-        interactive_mode()
+        interactive_mode(graph)

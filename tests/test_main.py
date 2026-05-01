@@ -36,7 +36,6 @@ def test_run_voc_single_turn(capsys):
         "error_message": None,
     }
     mock_graph.get_state.return_value = MagicMock(next=[])
-    with patch("main.build_graph", return_value=mock_graph):
-        run_voc("결제 방법 알려주세요")
+    run_voc(mock_graph, "결제 방법 알려주세요")
     captured = capsys.readouterr()
     assert "안내 드립니다." in captured.out
