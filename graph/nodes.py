@@ -8,7 +8,7 @@ from tools.read_tools import READ_TOOLS
 from tools.write_tools import WRITE_TOOLS
 from config import settings
 
-VALID_VOC_TYPES = {"COMPLAINT", "INQUIRY", "REQUEST", "DATA_MODIFICATION"}
+VALID_VOC_TYPES = {"COMPLAINT", "INQUIRY", "REQUEST", "DATA_MODIFICATION", "SIMPLE"}
 
 
 def classify_node(state: VocState) -> dict:
@@ -16,6 +16,7 @@ def classify_node(state: VocState) -> dict:
     messages = CLASSIFY_PROMPT.format_messages(voc_text=state["raw_input"])
     response = llm.invoke(messages)
     voc_type = response.content.strip()
+    print(voc_type)
     if voc_type not in VALID_VOC_TYPES:
         voc_type = "INQUIRY"
     return {"voc_type": voc_type}

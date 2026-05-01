@@ -9,7 +9,8 @@ CLASSIFY_PROMPT = ChatPromptTemplate.from_messages([
 - COMPLAINT: 불편사항, 오류 신고, 데이터 이상 문의
 - INQUIRY: 사용법 문의, 기능 설명 요청
 - REQUEST: 기능 추가 요청, 개선 제안
-- DATA_MODIFICATION: 데이터 수정/변경 요청"""),
+- DATA_MODIFICATION: 데이터 수정/변경 요청
+- SIMPLE: 시스템과 상관없는 일반적인 대화"""),
     ("human", "VOC: {voc_text}"),
 ])
 
