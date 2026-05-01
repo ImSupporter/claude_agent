@@ -56,3 +56,39 @@ def test_retrieve_node_failure():
     assert result["status"] == "error"
     assert "답변이 어렵습니다" in result["error_message"]
     assert result["doc_retrieval_attempts"] == 1
+
+from langchain_core.messages import AIMessage
+from graph.nodes import agent_node
+
+def test_agent_node_generates_response():
+    state = _base_state(
+        voc_type="INQUIRY",
+        retrieved_docs=[{"title": "가이드", "content": "결제는 설정 메뉴에서..."}],
+    )
+    mock_llm = MagicMock()
+    mock_llm.invoke.side_effect = [
+        MagicMock(content="NO"),
+        AIMessage(content="결제 설정 메뉴에서 진행하세요.", tool_calls=[]),
+    ]
+    mock_llm.bind_tools = MagicMock(return_value=mock_llm)
+    with patch("graph.nodes.ChatAnthropic", return_value=mock_llm):
+        result = agent_node(state)
+    assert result["response"] == "결제 설정 메뉴에서 진행하세요."
+    assert result["status"] == "done"
+
+def test_agent_node_write_tools_only_for_data_modification():
+    state = _base_state(
+        voc_type="COMPLAINT",
+        retrieved_docs=[{"title": "가이드", "content": "..."}],
+    )
+    mock_llm = MagicMock()
+    mock_llm.invoke.side_effect = [
+        MagicMock(content="NO"),
+        AIMessage(content="답변입니다.", tool_calls=[]),
+    ]
+    mock_llm.bind_tools = MagicMock(return_value=mock_llm)
+    with patch("graph.nodes.ChatAnthropic", return_value=mock_llm):
+        agent_node(state)
+    bound_tools = mock_llm.bind_tools.call_args[0][0]
+    tool_names = [t.name for t in bound_tools]
+    assert "update_user_status" not in tool_names

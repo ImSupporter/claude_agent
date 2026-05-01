@@ -36,3 +36,75 @@ def retrieve_node(state: VocState) -> dict:
             "status": "error",
             "error_message": "현재 관련 정보를 조회할 수 없어 답변이 어렵습니다. 잠시 후 다시 시도해 주세요.",
         }
+
+
+def _select_tools(voc_type: str) -> list[BaseTool]:
+    if voc_type == "DATA_MODIFICATION":
+        return READ_TOOLS + WRITE_TOOLS
+    return list(READ_TOOLS)
+
+
+def _format_docs(docs: list[dict]) -> str:
+    return "\n\n".join(f"[{d['title']}]\n{d['content']}" for d in docs)
+
+
+def _format_history(history: list[dict]) -> str:
+    if not history:
+        return "없음"
+    return "\n".join(f"{h['role']}: {h['content']}" for h in history)
+
+
+def agent_node(state: VocState) -> dict:
+    from langchain_core.messages import SystemMessage, HumanMessage, ToolMessage as LCToolMessage
+
+    llm = ChatAnthropic(model=settings.model_name, api_key=settings.anthropic_api_key)
+    docs_context = _format_docs(state["retrieved_docs"])
+    docs_summary = docs_context[:500]
+
+    # 추가 정보 필요 여부 판단
+    clarification_messages = NEEDS_CLARIFICATION_PROMPT.format_messages(
+        voc_text=state["raw_input"],
+        docs_summary=docs_summary,
+    )
+    needs_response = llm.invoke(clarification_messages)
+    question = needs_response.content.strip()
+
+    conversation_history = list(state.get("conversation_history", []))
+    if question != "NO":
+        user_answer = interrupt(question)
+        conversation_history.append({"role": "assistant", "content": question})
+        conversation_history.append({"role": "user", "content": user_answer})
+
+    # Tool 선택 및 바인딩
+    tools = _select_tools(state["voc_type"])
+    llm_with_tools = llm.bind_tools(tools)
+    tool_map = {t.name: t for t in tools}
+
+    messages = [
+        SystemMessage(content=AGENT_SYSTEM_PROMPT.format(
+            docs_context=docs_context,
+            conversation_history=_format_history(conversation_history),
+        )),
+        HumanMessage(content=state["raw_input"]),
+    ]
+
+    sql_results: list[dict] = []
+    sql_tools_used: list[str] = []
+
+    response = llm_with_tools.invoke(messages)
+    while getattr(response, "tool_calls", None):
+        messages.append(response)
+        for tc in response.tool_calls:
+            tool_result = tool_map[tc["name"]].invoke(tc["args"])
+            sql_results.append({"tool": tc["name"], "result": tool_result})
+            sql_tools_used.append(tc["name"])
+            messages.append(LCToolMessage(content=str(tool_result), tool_call_id=tc["id"]))
+        response = llm_with_tools.invoke(messages)
+
+    return {
+        "response": response.content,
+        "sql_results": sql_results,
+        "sql_tools_used": sql_tools_used,
+        "conversation_history": conversation_history,
+        "status": "done",
+    }
