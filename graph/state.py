@@ -5,6 +5,7 @@ class VocState(TypedDict):
     raw_input: str
     conversation_history: list[dict]
     voc_type: str
+    supervise_action: str
     retrieved_docs: list[dict]
     doc_retrieval_attempts: int
     sql_results: list[dict]

@@ -33,6 +33,7 @@ def _initial_state(voc_text: str) -> VocState:
         "raw_input": voc_text,
         "conversation_history": [],
         "voc_type": "",
+        "supervise_action": "",
         "retrieved_docs": [],
         "doc_retrieval_attempts": 0,
         "sql_results": [],
