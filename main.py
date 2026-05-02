@@ -12,6 +12,7 @@ VOC_TYPE_KO = {
     "INQUIRY": "사용법 문의",
     "REQUEST": "요청사항",
     "DATA_MODIFICATION": "데이터 수정",
+    "SIMPLE": "단순 문의",
 }
 
 def format_output(state: dict) -> str:
