@@ -1,7 +1,7 @@
 # VOC Agent 설계 문서
 
 **작성일:** 2026-05-01  
-**상태:** 승인됨
+**상태:** 부분 갱신됨 — 그래프 흐름은 `2026-05-02-supervise-node-design.md` 참조
 
 ---
 
@@ -34,19 +34,19 @@
 
 ## 3. 전체 아키텍처 및 그래프 흐름
 
+> **2026-05-02 업데이트:** supervise_node 도입으로 흐름 변경. 상세 설계는 `2026-05-02-supervise-node-design.md` 참조.
+
 ```
 CLI 입력 (VOC 텍스트)
         ↓
   [classify_node]
     LLM이 voc_type 판별
         ↓
-  [retrieve_node]
-    POST /search 호출 (최대 3회 재시도)
-    실패 시 → status=error, "답변 불가" 출력 후 종료
-        ↓
-  [interrupt?]  ──── 에이전트가 추가 정보 필요 판단 시
-    사용자 질문 → 답변 → conversation_history 누적
-    (멀티턴 루프, MemorySaver checkpointer)
+  [supervise_node]  ← retrieve 후에도 복귀 (사이클)
+    LLM이 현재 State 보고 행동 결정
+    ├── "answer"   → [agent_node]
+    ├── "retrieve" → [retrieve_node] → 복귀
+    └── "end"      → (retrieve 실패 시) 종료
         ↓
   [agent_node]
     voc_type에 따라 tool 집합 결정
@@ -57,9 +57,6 @@ CLI 입력 (VOC 텍스트)
         ↓
   [output]
     구조화 출력 (유형 + 참고문서 + 답변)
-
-  [향후 확장]
-    → send_message_node (메신저 REST API 발신)
 ```
 
 ---
@@ -73,7 +70,10 @@ class VocState(TypedDict):
     conversation_history: list[dict]  # 멀티턴 대화 이력
 
     # 분류
-    voc_type: str                     # COMPLAINT | INQUIRY | REQUEST | DATA_MODIFICATION
+    voc_type: str                     # COMPLAINT | INQUIRY | REQUEST | DATA_MODIFICATION | SIMPLE
+
+    # 수퍼바이저 (2026-05-02 추가)
+    supervise_action: str             # "" | "answer" | "retrieve" | "end"
 
     # 문서 검색
     retrieved_docs: list[dict]        # POST /search 결과
@@ -85,7 +85,7 @@ class VocState(TypedDict):
 
     # 출력
     response: str                     # 최종 답변 텍스트
-    status: str                       # processing | done | error | awaiting_input
+    status: str                       # processing | done | error
     error_message: str | None         # 에러 시 안내 메시지
 ```
 
