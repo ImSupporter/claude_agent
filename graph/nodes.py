@@ -11,6 +11,7 @@ from tools.write_tools import WRITE_TOOLS
 from config import settings
 
 VALID_VOC_TYPES = {"COMPLAINT", "INQUIRY", "REQUEST", "DATA_MODIFICATION", "SIMPLE"}
+_MAX_ASK_ROUNDS = 3
 
 
 def classify_node(state: VocState) -> dict:
@@ -70,7 +71,7 @@ def supervise_node(state: VocState) -> dict:
     llm_structured = llm.with_structured_output(SuperviseDecision)
     conversation_history = list(state.get("conversation_history", []))
 
-    while True:
+    for _ in range(_MAX_ASK_ROUNDS):
         messages = SUPERVISE_PROMPT.format_messages(
             voc_type=state["voc_type"],
             voc_text=state["raw_input"],
@@ -93,6 +94,8 @@ def supervise_node(state: VocState) -> dict:
             user_answer = interrupt(decision.question)
             conversation_history.append({"role": "assistant", "content": decision.question})
             conversation_history.append({"role": "user", "content": user_answer})
+
+    return {"supervise_action": "answer", "conversation_history": conversation_history}
 
 
 def agent_node(state: VocState) -> dict:
