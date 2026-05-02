@@ -67,13 +67,11 @@ def test_agent_node_generates_response():
     state = _base_state(
         voc_type="INQUIRY",
         retrieved_docs=[{"title": "가이드", "content": "결제는 설정 메뉴에서..."}],
+        conversation_history=[],
     )
     mock_llm = MagicMock()
-    mock_llm.invoke.side_effect = [
-        MagicMock(content="NO"),
-        AIMessage(content="결제 설정 메뉴에서 진행하세요.", tool_calls=[]),
-    ]
-    mock_llm.bind_tools = MagicMock(return_value=mock_llm)
+    mock_llm.invoke.return_value = AIMessage(content="결제 설정 메뉴에서 진행하세요.", tool_calls=[])
+    mock_llm.bind_tools.return_value = mock_llm
     with patch("graph.nodes.ChatAnthropic", return_value=mock_llm):
         result = agent_node(state)
     assert result["response"] == "결제 설정 메뉴에서 진행하세요."
@@ -85,10 +83,7 @@ def test_agent_node_write_tools_only_for_data_modification():
         retrieved_docs=[{"title": "가이드", "content": "..."}],
     )
     mock_llm = MagicMock()
-    mock_llm.invoke.side_effect = [
-        MagicMock(content="NO"),
-        AIMessage(content="답변입니다.", tool_calls=[]),
-    ]
+    mock_llm.invoke.return_value = AIMessage(content="답변입니다.", tool_calls=[])
     mock_llm.bind_tools = MagicMock(return_value=mock_llm)
     with patch("graph.nodes.ChatAnthropic", return_value=mock_llm):
         agent_node(state)

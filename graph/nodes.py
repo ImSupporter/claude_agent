@@ -103,12 +103,8 @@ def agent_node(state: VocState) -> dict:
 
     llm = ChatAnthropic(model=settings.model_name, api_key=settings.anthropic_api_key)
     docs_context = _format_docs(state["retrieved_docs"])
-
-    # 추가 정보 필요 여부 판단 (SUPERVISE_PROMPT로 교체 예정)
-    # supervise_node 구현 시까지 기존 로직 유지
     conversation_history = list(state.get("conversation_history", []))
 
-    # Tool 선택 및 바인딩
     tools = _select_tools(state["voc_type"])
     llm_with_tools = llm.bind_tools(tools)
     tool_map = {t.name: t for t in tools}
