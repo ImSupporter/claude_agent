@@ -8,6 +8,8 @@ def route_after_supervise(state: VocState) -> str:
         return "agent"
     if action == "retrieve":
         return "retrieve"
+    if action == "end":
+        return END
     return END
 
 

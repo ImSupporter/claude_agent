@@ -58,6 +58,11 @@ def test_workflow_inquiry_with_retrieve():
     mock_structured_1.invoke.return_value = SuperviseDecision(action="retrieve")
     mock_structured_2 = MagicMock()
     mock_structured_2.invoke.return_value = SuperviseDecision(action="answer")
+    # side_effect의 순서가 중요: supervise_node는 총 2회 호출되며, 매 호출마다
+    # ChatAnthropic()이 동일한 mock_llm 인스턴스를 반환하고 with_structured_output도
+    # 동일 인스턴스에서 순서대로 호출된다.
+    # 1번째 호출: supervise(retrieve 결정) → mock_structured_1 반환
+    # 2번째 호출: retrieve 후 재진입한 supervise(answer 결정) → mock_structured_2 반환
     mock_llm.with_structured_output.side_effect = [mock_structured_1, mock_structured_2]
     mock_llm.invoke.side_effect = [
         MagicMock(content="INQUIRY"),

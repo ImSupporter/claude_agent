@@ -1,11 +1,12 @@
 from langgraph.graph import StateGraph, END
+from langgraph.graph.state import CompiledStateGraph
 from langgraph.checkpoint.memory import MemorySaver
 from graph.state import VocState
 from graph.nodes import classify_node, supervise_node, retrieve_node, agent_node
-from graph.edges import route_after_supervise, route_after_retrieve
+from graph.edges import route_after_supervise
 
 
-def build_graph() -> StateGraph:
+def build_graph() -> CompiledStateGraph:
     builder = StateGraph(VocState)
 
     builder.add_node("classify", classify_node)
