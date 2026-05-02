@@ -2,7 +2,7 @@ from langchain_anthropic import ChatAnthropic
 from langchain_core.tools import BaseTool
 from langgraph.types import interrupt
 from graph.state import VocState
-from prompts.templates import CLASSIFY_PROMPT, AGENT_SYSTEM_PROMPT, SUPERVISE_PROMPT
+from prompts.templates import CLASSIFY_PROMPT, AGENT_SYSTEM_PROMPT
 from tools.doc_retriever import query_documents, DocRetrievalError
 from tools.read_tools import READ_TOOLS
 from tools.write_tools import WRITE_TOOLS
@@ -60,7 +60,6 @@ def agent_node(state: VocState) -> dict:
 
     llm = ChatAnthropic(model=settings.model_name, api_key=settings.anthropic_api_key)
     docs_context = _format_docs(state["retrieved_docs"])
-    docs_summary = docs_context[:500]
 
     # 추가 정보 필요 여부 판단 (SUPERVISE_PROMPT로 교체 예정)
     # supervise_node 구현 시까지 기존 로직 유지
