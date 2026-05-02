@@ -1,12 +1,15 @@
 from langgraph.graph import END
 from graph.state import VocState
 
-def route_after_classify(state: VocState) -> str:
-    if state["voc_type"] == "SIMPLE":
+
+def route_after_supervise(state: VocState) -> str:
+    action = state["supervise_action"]
+    if action == "answer":
         return "agent"
-    return "retrieve"
+    if action == "retrieve":
+        return "retrieve"
+    return END
+
 
 def route_after_retrieve(state: VocState) -> str:
-    if state["status"] == "error":
-        return END
-    return "agent"
+    return "supervise"
