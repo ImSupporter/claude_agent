@@ -2,7 +2,7 @@ from langchain_anthropic import ChatAnthropic
 from langchain_core.tools import BaseTool
 from langgraph.types import interrupt
 from graph.state import VocState
-from prompts.templates import CLASSIFY_PROMPT, AGENT_SYSTEM_PROMPT, NEEDS_CLARIFICATION_PROMPT
+from prompts.templates import CLASSIFY_PROMPT, AGENT_SYSTEM_PROMPT, SUPERVISE_PROMPT
 from tools.doc_retriever import query_documents, DocRetrievalError
 from tools.read_tools import READ_TOOLS
 from tools.write_tools import WRITE_TOOLS
@@ -62,19 +62,9 @@ def agent_node(state: VocState) -> dict:
     docs_context = _format_docs(state["retrieved_docs"])
     docs_summary = docs_context[:500]
 
-    # 추가 정보 필요 여부 판단
-    clarification_messages = NEEDS_CLARIFICATION_PROMPT.format_messages(
-        voc_text=state["raw_input"],
-        docs_summary=docs_summary,
-    )
-    needs_response = llm.invoke(clarification_messages)
-    question = needs_response.content.strip()
-
+    # 추가 정보 필요 여부 판단 (SUPERVISE_PROMPT로 교체 예정)
+    # supervise_node 구현 시까지 기존 로직 유지
     conversation_history = list(state.get("conversation_history", []))
-    if question != "NO":
-        user_answer = interrupt(question)
-        conversation_history.append({"role": "assistant", "content": question})
-        conversation_history.append({"role": "user", "content": user_answer})
 
     # Tool 선택 및 바인딩
     tools = _select_tools(state["voc_type"])
