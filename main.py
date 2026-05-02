@@ -3,6 +3,7 @@ import uuid
 from langgraph.types import Command
 from graph.workflow import build_graph
 from graph.state import VocState
+from pathlib import Path
 
 SEPARATOR = "━" * 40
 
@@ -41,6 +42,17 @@ def _initial_state(voc_text: str) -> VocState:
         "error_message": None,
     }
 
+def draw_graph(graph, output: str = None) -> None:
+    if output and output.endswith(".png"):
+        png_bytes = graph.get_graph().draw_mermaid_png()
+        Path(output).write_bytes(png_bytes)
+        print(f"그래프 이미지 저장: {output}")
+    else:
+        print(graph.get_graph().draw_mermaid())
+        if output:
+            Path(output).write_text(graph.get_graph().draw_mermaid(), encoding="utf-8")
+            print(f"Mermaid 다이어그램 저장: {output}")
+
 def run_voc(graph, voc_text: str) -> None:
     config = {"configurable": {"thread_id": str(uuid.uuid4())}}
     result = graph.invoke(_initial_state(voc_text), config)
@@ -74,11 +86,15 @@ if __name__ == "__main__":
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--input", "-i", type=str, help="처리할 VOC 텍스트 (없으면 대화형 모드)")
     group.add_argument("--interactive", action="store_true", help="대화형 모드")
+    group.add_argument("--draw", nargs="?", const="", metavar="OUTPUT",
+                       help="그래프 시각화. 경로 미지정 시 콘솔 출력, .png 확장자면 이미지로 저장, 그 외 경로면 Mermaid 텍스트로 저장")
     args = parser.parse_args()
 
     graph = build_graph()
 
-    if args.input:
+    if args.draw is not None:
+        draw_graph(graph, args.draw or None)
+    elif args.input:
         run_voc(graph, args.input)
     else:
         interactive_mode(graph)
