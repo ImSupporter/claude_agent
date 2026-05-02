@@ -1,8 +1,10 @@
 from langchain_anthropic import ChatAnthropic
 from langchain_core.tools import BaseTool
 from langgraph.types import interrupt
+from pydantic import BaseModel
+from typing import Literal
 from graph.state import VocState
-from prompts.templates import CLASSIFY_PROMPT, AGENT_SYSTEM_PROMPT
+from prompts.templates import CLASSIFY_PROMPT, AGENT_SYSTEM_PROMPT, SUPERVISE_PROMPT
 from tools.doc_retriever import query_documents, DocRetrievalError
 from tools.read_tools import READ_TOOLS
 from tools.write_tools import WRITE_TOOLS
@@ -53,6 +55,44 @@ def _format_history(history: list[dict]) -> str:
     if not history:
         return "없음"
     return "\n".join(f"{h['role']}: {h['content']}" for h in history)
+
+
+class SuperviseDecision(BaseModel):
+    action: Literal["answer", "retrieve", "ask"]
+    question: str | None = None
+
+
+def supervise_node(state: VocState) -> dict:
+    if state["status"] == "error":
+        return {"supervise_action": "end"}
+
+    llm = ChatAnthropic(model=settings.model_name, api_key=settings.anthropic_api_key)
+    llm_structured = llm.with_structured_output(SuperviseDecision)
+    conversation_history = list(state.get("conversation_history", []))
+
+    while True:
+        messages = SUPERVISE_PROMPT.format_messages(
+            voc_type=state["voc_type"],
+            voc_text=state["raw_input"],
+            docs_context=_format_docs(state["retrieved_docs"]) or "없음",
+            conversation_history=_format_history(conversation_history),
+        )
+        decision: SuperviseDecision = llm_structured.invoke(messages)
+
+        if decision.action == "answer":
+            return {
+                "supervise_action": "answer",
+                "conversation_history": conversation_history,
+            }
+        if decision.action == "retrieve":
+            return {
+                "supervise_action": "retrieve",
+                "conversation_history": conversation_history,
+            }
+        if decision.action == "ask":
+            user_answer = interrupt(decision.question)
+            conversation_history.append({"role": "assistant", "content": decision.question})
+            conversation_history.append({"role": "user", "content": user_answer})
 
 
 def agent_node(state: VocState) -> dict:

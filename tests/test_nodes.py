@@ -1,5 +1,7 @@
 import pytest
 from unittest.mock import patch, MagicMock
+from pydantic import BaseModel
+from typing import Literal
 from graph.state import VocState
 from graph.nodes import classify_node
 
@@ -93,3 +95,55 @@ def test_agent_node_write_tools_only_for_data_modification():
     bound_tools = mock_llm.bind_tools.call_args[0][0]
     tool_names = [t.name for t in bound_tools]
     assert "update_user_status" not in tool_names
+
+
+def test_supervise_node_returns_answer_for_simple():
+    """SIMPLE 유형: LLM이 answer 반환"""
+    from graph.nodes import supervise_node, SuperviseDecision
+    mock_llm = MagicMock()
+    mock_structured = MagicMock()
+    mock_structured.invoke.return_value = SuperviseDecision(action="answer")
+    mock_llm.with_structured_output.return_value = mock_structured
+    with patch("graph.nodes.ChatAnthropic", return_value=mock_llm):
+        result = supervise_node(_base_state(voc_type="SIMPLE"))
+    assert result["supervise_action"] == "answer"
+
+def test_supervise_node_returns_retrieve_when_no_docs():
+    """문서 없는 COMPLAINT: LLM이 retrieve 반환"""
+    from graph.nodes import supervise_node, SuperviseDecision
+    mock_llm = MagicMock()
+    mock_structured = MagicMock()
+    mock_structured.invoke.return_value = SuperviseDecision(action="retrieve")
+    mock_llm.with_structured_output.return_value = mock_structured
+    with patch("graph.nodes.ChatAnthropic", return_value=mock_llm):
+        result = supervise_node(_base_state(voc_type="COMPLAINT"))
+    assert result["supervise_action"] == "retrieve"
+
+def test_supervise_node_returns_end_on_error():
+    """status==error: LLM 호출 없이 즉시 end 반환"""
+    from graph.nodes import supervise_node
+    with patch("graph.nodes.ChatAnthropic") as mock_cls:
+        result = supervise_node(_base_state(status="error"))
+    mock_cls.assert_not_called()
+    assert result["supervise_action"] == "end"
+
+def test_supervise_node_interrupt_on_ask():
+    """ask 후 interrupt → 재판단 → answer"""
+    from graph.nodes import supervise_node, SuperviseDecision
+    mock_llm = MagicMock()
+    mock_structured = MagicMock()
+    mock_structured.invoke.side_effect = [
+        SuperviseDecision(action="ask", question="사용자 ID가 무엇인가요?"),
+        SuperviseDecision(action="answer"),
+    ]
+    mock_llm.with_structured_output.return_value = mock_structured
+    with patch("graph.nodes.ChatAnthropic", return_value=mock_llm), \
+         patch("graph.nodes.interrupt", return_value="user123"):
+        result = supervise_node(_base_state(
+            voc_type="COMPLAINT",
+            retrieved_docs=[{"title": "가이드", "content": "내용"}],
+        ))
+    assert result["supervise_action"] == "answer"
+    history = result["conversation_history"]
+    assert history[0] == {"role": "assistant", "content": "사용자 ID가 무엇인가요?"}
+    assert history[1] == {"role": "user", "content": "user123"}
