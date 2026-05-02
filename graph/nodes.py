@@ -19,7 +19,6 @@ def classify_node(state: VocState) -> dict:
     messages = CLASSIFY_PROMPT.format_messages(voc_text=state["raw_input"])
     response = llm.invoke(messages)
     voc_type = response.content.strip()
-    print(voc_type)
     if voc_type not in VALID_VOC_TYPES:
         voc_type = "INQUIRY"
     return {"voc_type": voc_type}
