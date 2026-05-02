@@ -6,6 +6,7 @@ def test_voc_state_required_keys():
         "raw_input": "결제가 안 돼요",
         "conversation_history": [],
         "voc_type": "",
+        "supervise_action": "",
         "retrieved_docs": [],
         "doc_retrieval_attempts": 0,
         "sql_results": [],
